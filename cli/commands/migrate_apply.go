@@ -517,5 +517,23 @@ func getMigrationTypeAndStep(
 		return "", 0, herrors.E(op, fmt.Errorf("not a valid input for steps/version: %w", err))
 	}
 
+	// --up and --down take a number of migrations to apply. A count this large
+	// is almost certainly a migration version passed to the wrong flag, and
+	// running it would apply (or roll back) every migration there is.
+	if (migrationName == "up" || migrationName == "down") && step >= maxMigrationSteps {
+		return "", 0, herrors.E(
+			op,
+			fmt.Errorf(
+				"--%s expects a number of migrations, but %d looks like a migration version; to apply a single version use --version %d --type %s",
+				migrationName, step, step, migrationName,
+			),
+		)
+	}
+
 	return migrationName, step, nil
 }
+
+// maxMigrationSteps is the smallest --up/--down value treated as a mistaken
+// migration version. Versions are timestamps, so they are far larger than any
+// real number of migrations.
+const maxMigrationSteps = 1_000_000_000
