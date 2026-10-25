@@ -301,11 +301,14 @@ splitSQLStatements = filter (not . T.null) . map T.strip . process T.empty False
                   process (T.snoc acc '\'') (not inString) dollarTag inComment rest
             '$' ->
               case dollarTag of
+                -- The closing delimiter is the whole tag followed by '$'; a
+                -- prefix match on the tag alone would let any lone '$' close
+                -- a '$$' block, since its tag is just "$".
                 Just tag
-                  | tag `T.isPrefixOf` txt ->
+                  | (tag <> "$") `T.isPrefixOf` txt ->
                       process (acc <> tag <> "$") inString Nothing inComment (T.drop (T.length tag + 1) txt)
                 _
-                  | not (inString || inComment) ->
+                  | isNothing dollarTag && not (inString || inComment) ->
                       let (tag', remaining) = readDollarTag txt
                        in if T.null tag'
                             then process (T.snoc acc '$') inString dollarTag inComment rest

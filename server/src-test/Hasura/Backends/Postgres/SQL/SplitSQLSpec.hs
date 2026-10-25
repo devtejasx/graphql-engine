@@ -26,6 +26,14 @@ spec = describe "splitSQLStatements" $ do
     let sql = "SELECT $$hello;world$$; SELECT $tag$foo;bar$tag$;"
     splitSQLStatements sql `shouldBe` ["SELECT $$hello;world$$", "SELECT $tag$foo;bar$tag$"]
 
+  it "does not close a $$ block at a lone $" $ do
+    let sql = "DO $$ BEGIN IF 'x' ~ '^x$' THEN NULL; END IF; END $$; SELECT 2;"
+    splitSQLStatements sql `shouldBe` ["DO $$ BEGIN IF 'x' ~ '^x$' THEN NULL; END IF; END $$", "SELECT 2"]
+
+  it "does not close a tagged block at a longer tag" $ do
+    let sql = "SELECT $a$x;$ab$;y$a$; SELECT 2;"
+    splitSQLStatements sql `shouldBe` ["SELECT $a$x;$ab$;y$a$", "SELECT 2"]
+
   it "ignores comments" $ do
     let sql = "SELECT 1; -- comment here\nSELECT 2; /* multi-line\n comment */SELECT 3;"
     splitSQLStatements sql `shouldBe` ["SELECT 1", "SELECT 2", "SELECT 3"]
