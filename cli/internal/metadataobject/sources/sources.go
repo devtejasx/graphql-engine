@@ -174,6 +174,17 @@ func (t *SourceConfig) Export(metadata map[string]yaml.Node) (map[string][]byte,
 		return nil, errors.E(op, t.error(err))
 	}
 
+	for _, source := range sources {
+		if key := plainTextConnectionString(source.Configuration); key != "" {
+			t.logger.Warnf(
+				"the %s of database %q is written in plain text to %s; set it from an environment variable (from_env) so that the credentials are not stored in the project",
+				key,
+				source.Name,
+				filepath.ToSlash(filepath.Join(t.BaseDirectory(), t.Filename())),
+			)
+		}
+	}
+
 	// Build sources.yaml
 	for idx, source := range sources {
 		var (

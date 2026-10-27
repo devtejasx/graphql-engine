@@ -8,6 +8,37 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
+// mappingValue returns the value of key in a YAML mapping node, or nil.
+func mappingValue(node *yaml.Node, key string) *yaml.Node {
+	if node == nil || node.Kind != yaml.MappingNode {
+		return nil
+	}
+
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		if node.Content[i].Value == key {
+			return node.Content[i+1]
+		}
+	}
+
+	return nil
+}
+
+// plainTextConnectionString returns the key of a source's connection string
+// (database_url for Postgres like sources, connection_string for MS SQL
+// Server) when it is set to a literal value instead of {from_env: ...}, so it
+// would be written to the project files. It returns "" otherwise.
+func plainTextConnectionString(configuration yaml.Node) string {
+	connectionInfo := mappingValue(&configuration, "connection_info")
+	for _, key := range []string{"database_url", "connection_string"} {
+		value := mappingValue(connectionInfo, key)
+		if value != nil && value.Kind == yaml.ScalarNode && value.Value != "" {
+			return key
+		}
+	}
+
+	return ""
+}
+
 func getTableYamlFileName(node yaml.Node) (string, error) {
 	var op errors.Op = "sources.getTableYamlFileName"
 
