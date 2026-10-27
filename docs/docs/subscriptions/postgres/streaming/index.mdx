@@ -64,3 +64,12 @@ but `WITH TIES` is not, like Cockroach, a cursor on a non-unique column may
 lead to some rows being skipped when the column data contains duplicates.
 
 :::
+
+:::caution Special date/time values as the initial cursor value
+
+Do not use Postgres' special date/time input values, such as `now`, `today` or `epoch`, as the `initial_value` of a
+cursor. The cursor value is sent to Postgres as text and converted on every poll, so `now` means the time of the latest
+poll, not the time the subscription started. Until the first batch moves the cursor, rows created between two polls are
+then skipped. Pass a concrete timestamp computed by the client instead, for example `"2022-06-15T10:00:00Z"`.
+
+:::
