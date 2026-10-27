@@ -112,3 +112,35 @@ WHERE (delivered = true OR error = true)
 
 See the [Postgres date/time functions](https://www.postgresql.org/docs/current/functions-datetime.html)
 for more details.
+
+## Cleaning up large tables
+
+On large event tables, a single `DELETE` of most of the rows can run for a long time, write a lot of WAL (transaction
+log), and leave many dead rows behind. Postgres then reclaims them with a long `AUTOVACUUM`, which also writes WAL and
+can fill up the database disk.
+
+If you want to remove **all** event data (Option 5), `TRUNCATE` is much faster and frees the space immediately, without
+leaving dead rows for autovacuum:
+
+```sql
+TRUNCATE hdb_catalog.event_invocation_logs, hdb_catalog.event_log;
+```
+
+:::caution Warning
+
+Like Option 5, this also removes the events that are not delivered yet, and it cannot be limited with a `WHERE` clause.
+`TRUNCATE` takes an exclusive lock on both tables, so writes to tables with Event Triggers wait until it has finished.
+
+:::
+
+To remove only part of the data, delete it in batches instead of in a single statement, so that each transaction stays
+short and autovacuum can keep up. For example, run the following until it deletes no more rows, then do the same for
+`hdb_catalog.event_log`:
+
+```sql
+DELETE FROM hdb_catalog.event_invocation_logs
+WHERE id IN (
+    SELECT id FROM hdb_catalog.event_invocation_logs
+    WHERE created_at < now() - interval '3 months'
+    LIMIT 10000 );
+```
