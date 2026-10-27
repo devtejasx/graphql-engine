@@ -69,6 +69,21 @@ Here's how a GraphQL request is processed in webhook mode:
 
 <Thumbnail src='/img/auth/auth-webhook-overview.png' alt='Authentication using webhooks' width='1000px' />
 
+## Session variables sent as request headers
+
+Clients can send `X-Hasura-*` request headers, but whether Hasura uses them as session variables depends on how the
+request is authenticated:
+
+| Request                                          | Session variables come from                                                                                                                                        |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| With a valid admin secret, or no auth set up     | All `X-Hasura-*` request headers. `X-Hasura-Role` selects the role, which defaults to `admin`.                                                                     |
+| With a JWT                                       | The `x-hasura-*` claims of the JWT. Of the request headers only `X-Hasura-Role` is used, to pick one of the allowed roles; other `X-Hasura-*` headers are ignored. |
+| Through the auth webhook                         | The webhook response only. The request headers are sent to the webhook, which decides what to return.                                                              |
+| Without credentials, as the unauthenticated role | The `X-Hasura-*` request headers, for the [unauthenticated role](/auth/authentication/unauthenticated-access.mdx).                                                 |
+
+So a client that is authenticated with a JWT or through the webhook cannot set or override session variables like
+`X-Hasura-User-Id` by sending them as headers.
+
 ## Other access levels
 - [Admin secret access](/auth/authentication/admin-secret-access.mdx)
 - [Unauthenticated / Public access](/auth/authentication/unauthenticated-access.mdx)
