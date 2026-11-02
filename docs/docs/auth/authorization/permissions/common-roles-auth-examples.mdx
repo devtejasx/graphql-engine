@@ -517,3 +517,20 @@ If the `X-Hasura-Role` and the `X-Hasura-User-Id` session variables are set to `
 />
 
 Observe that the `user_profile_private` field is returned as `null` for all rows without the appropriate access.
+
+:::tip Using inherited roles instead
+
+If the role only needs to read the data, [inherited roles](/auth/authorization/inherited-roles.mdx) solve this without a
+view. Create two roles with one select permission each on `user_profile`:
+
+- `user_public`: access to `id`, `name` and `city`, without a row condition.
+- `user_owner`: access to all columns when `id` is equal to `X-Hasura-User-Id`.
+
+Then create an inherited role `user` made of `user_public` and `user_owner`. It can read every row; `email`, `phone` and
+`address` are returned for the user's own row and are `null` in the other rows, as described in
+[how select permissions are inherited](/auth/authorization/inherited-roles.mdx#1-select-permissions).
+
+This does not work for mutations: an inherited role only gets a mutation permission when that permission is the same in
+all the roles it inherits from.
+
+:::
